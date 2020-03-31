@@ -1,0 +1,362 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+}
+<style>
+    .loader {
+        position: fixed;
+        left: 0px;
+        top: 0px;
+        width: 100%;
+        height: 100%;
+        z-index: 9999;
+        background: url('../../Content/images/Editpageloader.gif') 50% 50% no-repeat rgb(249,249,249);
+        background-color: transparent;
+        background-size: 100px;
+        opacity: .8;
+    }
+    table tr{
+        border:1px solid black;
+    }
+</style>
+<br />
+<br />
+
+<div class="row">
+    <input type="button" value="Add New" id="btn_addnew" class="btn btn-info" onclick="AddNewToDo()" />
+</div>
+<br />
+<div class="row">
+    <div class="panel panel-primary">
+        <div class="panel-heading">MY TODO List</div>
+        <div class="panel-body">
+            <table class="" id="table_todo"  style="width:100%">
+                <thead style="font-weight: bold; font-size: medium;text-align: center">
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Due Date</th>
+                        <th>Actions</th>
+
+                        <th></th>
+                        <th></th>
+
+                    </tr>
+
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+
+
+        </div>
+
+    </div>
+</div>
+<div class="loader" id="loaderdiv" style="display:none"></div>
+<div id="modal_div" data-url="@Url.Action("AddNewToDo","UserToDo")"></div>
+<script>
+    $(document).ready(function () {
+        //$('#duedate').datepicker({
+        //    //autoclose: true,
+        //    format: 'dd/mm/yyyy'
+        //});
+     var table = $('#table_todo').DataTable({
+    "proccessing": true,
+    "serverSide": true,
+    "ajax": {
+        url: "@Url.Action("UserToDo", "UserToDo")",
+        type: 'POST',
+        //success: function (result) { res=result }
+    },
+    "language": {
+        "search": "",
+        "searchPlaceholder": "Search..."
+         },
+         "columns": [
+        { "data": "Id" },
+       { "data": "Title" },
+             { "data": "DueDate" },
+             {
+
+                 "data": 'Id',
+                 "render": function (data, type, row, meta) {
+                     return '<button class="btn btn-warning" id="btn_edit_' + data + '"    onclick="EditFun(' + data + ')">Edit</button>'
+                 }
+             },
+
+
+              {
+
+                 "data": 'Id',
+                 "render": function (data, type, row, meta) {
+                     return '<button class="btn btn-info" id="btn_complete_' + data + '"    onclick="CompleteFun(' + data + ')">Mark Done</button>'
+                 }
+             },
+
+               {
+
+                 "data": 'Id',
+                 "render": function (data, type, row, meta) {
+                     return '<button class="btn btn-danger" id="btn_delete_' + data + '"    onclick="DeleteFun(' + data + ')">Delete</button>'
+                 }
+             },
+
+         ],
+
+         "initComplete": function (settings, json) {
+             var data = table
+                 .rows()
+                 .data();
+             //alert('The table has ' + data.length + ' records');
+             table.rows().every(function (rowIdx, tableLoop, rowLoop) {
+                 var currentrow = this.data();
+                 if (currentrow.Status == 1) {
+                     $("#btn_edit_" + currentrow.Id).css('display', 'none')
+                     $("#btn_edit_" + currentrow.Id).closest('tr').css('background', 'green');
+                     $("#btn_complete_" + currentrow.Id).css('display', 'none')
+                 }
+             });
+         }
+
+});
+
+
+        $('#table_todo tbody').on('click', '#btn_edit', function () {
+            var row = $(this).closest('tr');
+
+            var transactionID = table.row(row).data()["Id"];
+            alert("edit " + transactionID);
+
+        });
+            //--------------------------------------------------------------------
+
+            $('#table_todo tbody').on('click', '#btn_delete', function () {
+                var row = $(this).closest('tr');
+
+                var transactionID = table.row(row).data()["Id"];
+                alert("delete " + transactionID);
+            });
+        //--------------------------------------------------------------------
+                $('#table_todo tbody').on('click', '#btn_complete', function () {
+                    var row = $(this).closest('tr');
+
+                    var transactionID = table.row(row).data()["Id"];
+                    alert("complete " + transactionID);
+
+                });
+        //--------------------------------------------------------------------
+
+    });//load
+
+
+    function EditFun(id) {
+         $("#loaderdiv").css('display','block');
+        $.ajax({
+            url: '@Url.Action("EditToDo", "UserToDo")',
+            type: "Get",
+            data: {id:id},
+            success: function (res) {
+
+                $("#modal_div").html(res);
+                $('#AddNewModal').modal({ backdrop: 'static', keyboard: false, show: true });
+                $("#AddNewModal").modal("show");
+                $("#loaderdiv").css('display','none');
+
+            },
+            error: function () {
+                $("#loaderdiv").css('display', 'none');}
+        });//ajax
+    }
+        function CompleteFun(id) {
+            $.ajax({
+            url: '@Url.Action("CompeleteToDo", "UserToDo")',
+                type: "Get",
+                data: {id:id},
+            success: function (res) {
+                if (res == "done") {
+                    sweetAlert({
+                        title: "",
+                        text: 'done',
+                        type: "success"
+                    });
+                    location.reload();
+                }
+                else {
+                    sweetAlert({
+                        title: "error",
+                        text: res,
+                        type: "error"
+                    });
+                }
+            },
+            error: function () {
+                }
+        });//ajax
+        }
+
+    function DeleteFun(id) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.value) {
+                          $.ajax({
+            url: '@Url.Action("DeleteToDo", "UserToDo")',
+                type: "Get",
+                data: {id:id},
+            success: function (res) {
+                if (res == "done") {
+                    sweetAlert({
+                        title: "",
+                        text: 'done',
+                        type: "success"
+                    });
+                    location.reload();
+                }
+                else {
+                    sweetAlert({
+                        title: "error",
+                        text: res,
+                        type: "error"
+                    });
+                }
+            },
+            error: function () {
+                }
+        });//ajax
+
+
+
+                Swal.fire(
+                    'Deleted!',
+                    'Your file has been deleted.',
+                    'success'
+                )
+            }
+        })
+
+
+
+
+        }//fun
+    function AddNewToDo() {
+        $("#loaderdiv").css('display','block');
+        $.ajax({
+            url: '@Url.Action("AddNewToDo", "UserToDo")',
+            type: "Get",
+            success: function (res) {
+
+                $("#modal_div").html(res);
+                $('#AddNewModal').modal({ backdrop: 'static', keyboard: false, show: true });
+                $("#AddNewModal").modal("show");
+                $("#loaderdiv").css('display','none');
+
+            },
+            error: function () {
+                $("#loaderdiv").css('display', 'none');}
+        });//ajax
+    }
+
+  function SaveQuitfun() {
+            var flag = false;
+            var title = $("#txt_title").val();
+            var duedate = $("#duedate").val();
+            if (title == "" || title.length == 0) {
+                flag = true;
+
+
+            }
+            if (duedate == "" || duedate.length == 0) {
+                flag = true;
+
+            }
+            if (flag) {
+                sweetAlert({
+                    title: "Warning",
+                     text: 'Please Enter All Data',
+                    type: "Warning",
+                                    });
+            }
+
+            if (!flag) {
+                 $.ajax({
+                     url: '@Url.Action("AddNewToDo", "UserToDo")',
+                     data: { title: title, duedate: duedate},
+            type: "POST",
+                     success: function (res) {
+                         if (res =="done") {
+                             sweetAlert({
+                                 title: "",
+                                 text: 'done',
+                                 type: "success"
+                             });
+                             location.reload();
+                         }
+                         else {
+                             sweetAlert({
+                                 title: "error",
+                                 text: res,
+                                 type: "error"
+                             });
+                         }
+
+            },
+            error: function () {
+                $("#loaderdiv").css('display', 'none');}
+        });//ajax
+            }
+        }
+
+    function UpdateQuitfun(id) {
+            var flag = false;
+            var title = $("#txt_title").val();
+            var duedate = $("#duedate").val();
+            if (title == "" || title.length == 0) {
+                flag = true;
+            }
+            if (duedate == "" || duedate.length == 0) {
+                flag = true;
+            }
+            if (flag) {
+                sweetAlert({
+                    title: "Warning",
+                     text: 'Please Enter All Data',
+                    type: "Warning",
+                                    });
+            }
+
+            if (!flag) {
+                 $.ajax({
+                     url: '@Url.Action("EditToDo", "UserToDo")',
+                     data: { id:id,title: title, duedate: duedate},
+            type: "POST",
+                     success: function (res) {
+                         if (res =="done") {
+                             sweetAlert({
+                                 title: "",
+                                 text: 'done',
+                                 type: "success"
+                             });
+                             location.reload();
+                         }
+                         else {
+                             sweetAlert({
+                                 title: "error",
+                                 text: res,
+                                 type: "error"
+                             });
+                         }
+
+            },
+            error: function () {
+                $("#loaderdiv").css('display', 'none');}
+        });//ajax
+            }
+        }
+</script>
